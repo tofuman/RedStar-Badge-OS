@@ -2,6 +2,7 @@ import ugfx
 import pyb
 import buttons
 
+ugfx.init()
 buttons.init()
 
 COLORS = [ugfx.RED, ugfx.GREEN, ugfx.YELLOW, ugfx.WHITE ,ugfx.BLUE]

@@ -6,10 +6,14 @@ import buttons
 import dialogs
 from database import *
 from filesystem import *
+from app import *
 import uio
 import sys
 import gc
 import onboard
+
+ugfx.init()
+ugfx.clear()
 
 width = ugfx.width()
 height = ugfx.height()
@@ -33,7 +37,7 @@ components.append(options)
 components.append(btnr)
 components.append(btnl)
 ugfx.set_default_font(ugfx.FONT_MEDIUM_BOLD)
-l_cat = ugfx.Label(30,3,100,20,"Built-in",parent=win_files)
+l_cat = ugfx.Label(30,3,100,20,"",parent=win_files)
 components.append(l_cat)
 components.append(ugfx.Button(10,win_preview.height()-25,20,20,"A",parent=win_preview))
 components.append(ugfx.Label(35,win_preview.height()-25,50,20,"Run",parent=win_preview))
@@ -47,49 +51,32 @@ desc = ugfx.Label(3,1,win_preview.width()-10,win_preview.height()-83,"",parent=w
 components.append(author)
 components.append(desc)
 
-# Timer is needed to redraw everything while the rest is sleeping
-timer = pyb.Timer(3)
-timer.init(freq=60)
-timer.callback(lambda t:ugfx.poll())
+categories = get_local_app_categories()
+category_index = 0
+pinned = database_get("pinned", [])
 
-app_to_load = ""
+to_run = None
 
-catergories = ["Built-in", "Examples", "Settings", "Games", "Comms", "Other", "All"]
-c_ptr = 0
-
-def update_options(options, apps, pinned, cat):
-#	options.selected_index(0)
+def update_options():
 	options.disable_draw()
-	cat = cat.lower()
-	out = []
 	while options.count():
 		options.remove_item(0)
-	for app in apps:
-		att_name = get_app_attribute(app,"Appname")
-		app_cat = get_app_attribute(app,"Category").lower()
-		
-		#handle unspecified
-		if len(app_cat) == 0:
-			app_cat = "other"
-			
-		if app.startswith("examples/"):
-			app_cat = "examples"
-			
-		#handle the 'built-in' category
-		b_in = get_app_attribute(app,"built-in").lower()
-		
-		#see if we should show this app
-		if (app_cat == cat) | (cat == "all") | ((b_in == "yes") & (cat == "built-in")):
-			if not b_in == "hide":	#enables the hiding of the home screen to stop it calling itself
-				if len(att_name) == 0:
-					att_name = get_app_foldername(app)
-				if app in pinned:
-					options.add_item("*" + att_name)
-				else:
-					options.add_item(att_name)
-				out.append(app)
-		
-		
+
+	l_cat.text(categories[category_index])
+
+	out = []
+	for app in get_local_apps(categories[category_index]):
+		if app.get_attribute("built-in") == "hide":
+			continue
+
+		if app.folder_name in pinned:
+			options.add_item("*%s" % app)
+		else:
+			options.add_item("%s" % app)
+		out.append(app)
+
+	last_selected_index = -1
+	options.selected_index(0)
 	options.enable_draw()
 	return out
 
@@ -98,81 +85,56 @@ try:
 	win_files.show()
 	win_preview.show()
 
-	pinned = database_get("pinned", [])
-#	apps = []
-	apps_path = []
+	displayed_apps = update_options()
 
-	if is_dir("apps"):
-		for app in os.listdir("apps"):
-			path = "apps/" + app
-			if is_dir(path) and is_file(path + "/main.py"):
-				apps_path.append(path + "/main.py")
-	if is_dir("examples"):
-		for app in os.listdir("examples"):
-			path = "examples/" + app
-			if is_file(path) and path.endswith(".py"):
-				apps_path.append(path)
+	last_selected_index = -1
 
-	displayed_apps = update_options(options, apps_path, pinned, catergories[c_ptr])
-
-	index_prev = -1;
-	
 	while True:
 		pyb.wfi()
-		
-		if index_prev != options.selected_index():
-			if options.selected_index() < len(displayed_apps):
-				author.text("by: " + get_app_attribute(displayed_apps[options.selected_index()],"author"))
-				desc.text(get_app_attribute(displayed_apps[options.selected_index()],"description"))
-			index_prev = options.selected_index()
-		
+		ugfx.poll()
+
 		if buttons.is_triggered("JOY_LEFT"):
-			if c_ptr > 0:
-				c_ptr -= 1
-				btnl.set_focus()
-				l_cat.text(catergories[c_ptr])
-				displayed_apps = update_options(options, apps_path, pinned, catergories[c_ptr])
-				index_prev = -1				
-		
+			category_index = max(0, category_index - 1)
+			displayed_apps = update_options()
+			last_selected_index = -1
+
 		if buttons.is_triggered("JOY_RIGHT"):
-			if c_ptr < len(catergories)-1:
-				c_ptr += 1
-				btnr.set_focus()
-				l_cat.text(catergories[c_ptr])
-				displayed_apps = update_options(options, apps_path, pinned, catergories[c_ptr])
-				index_prev = -1				
-		
+			category_index = min(len(categories) - 1, category_index + 1)
+			displayed_apps = update_options()
+			last_selected_index = -1
+
+		app = displayed_apps[options.selected_index()]
+		if last_selected_index != options.selected_index():
+			if options.selected_index() < len(displayed_apps):
+				author.text("by: %s" % app.user)
+				desc.text(app.description)
+			last_selected_index = options.selected_index()
+
 		if buttons.is_triggered("BTN_MENU"):
-			app_path = displayed_apps[options.selected_index()]
-			if app_path in pinned:
-				pinned.remove(app_path)
+			if app.folder_name in pinned:
+				pinned.remove(app.folder_name)
 			else:
-				pinned.append(app_path)
-			update_options(options, apps_path, pinned, catergories[c_ptr])
+				pinned.append(app.folder_name)
+			update_options()
 			database_set("pinned", pinned)
 
 		if buttons.is_triggered("BTN_B"):
 			break
 
 		if buttons.is_triggered("BTN_A"):
-			# ToDo: Do something to go to the app
-			app_to_load = displayed_apps[options.selected_index()] #"test_app1"
+			to_run = app
 			break
 
 finally:
 	for component in components:
 		component.destroy()
 
-	timer.deinit()
-
-if len(app_to_load) > 0:
+if to_run:
+	print("Running: %s" % to_run)
+	buttons.enable_menu_reset()
+	gc.collect()
 	try:
-		buttons.enable_menu_reset()
-		gc.collect()
-		print("Loading: " + app_to_load)
-		mod = __import__(app_to_load[:-3])
-		if "main" in dir(mod):
-			mod.main()		
+		to_run.run()
 	except Exception as e:
 		s = uio.StringIO()
 		sys.print_exception(e, s)
@@ -188,12 +150,6 @@ if len(app_to_load) > 0:
 			while True:
 				pyb.wfi()
 				if (buttons.is_triggered("BTN_B")) or (buttons.is_triggered("BTN_B")) or (buttons.is_triggered("BTN_MENU")):
-					break;
-			#str=s.getvalue().split("\n")
-			#if len(str)>=4:
-			#out = "\n".join(str[4:])			
-			#dialogs.notice(out, width=wi-10, height=hi-10)
+					break
 	onboard.semihard_reset()
-	
-	#deinit ugfx here
-	#could hard reset here too
+

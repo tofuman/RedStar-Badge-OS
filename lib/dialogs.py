@@ -39,7 +39,7 @@ def prompt_boolean(text, title="TiLDA", true_text="Yes", false_text="No", width 
 	if false_text:
 		true_text = "A: " + true_text
 		false_text = "B: " + false_text
-	
+
 	ugfx.set_default_font(ugfx.FONT_SMALL)
 	label = ugfx.Label(5, 30, ugfx.width() - 25, 100, text = text, parent=window)
 	button_yes = ugfx.Button(5, window.height() - 40, 120 if false_text else window.width() - 15, 30 , true_text, parent=window)
@@ -74,7 +74,7 @@ def prompt_text(description, default="", init_text = "", true_text="OK", false_t
 	if false_text:
 		true_text = "M: " + true_text
 		false_text = "B: " + false_text
-		
+
 	if buttons.has_interrupt("BTN_MENU"):
 		buttons.disable_interrupt("BTN_MENU")
 
@@ -83,7 +83,7 @@ def prompt_text(description, default="", init_text = "", true_text="OK", false_t
 	button_yes = ugfx.Button(int(width*4/5), int(height/2)-30, int(width*1/5)-3, 25 , true_text, parent=window)
 	button_no = ugfx.Button(int(width*4/5), int(height/2)-30-30, int(width/5)-3, 25 , false_text, parent=window) if false_text else None
 	label = ugfx.Label(int(width/10), int(height/10), int(width*4/5), int(height*2/5)-60, description, parent=window)
-	
+
 
 	try:
 		buttons.init()
@@ -95,7 +95,7 @@ def prompt_text(description, default="", init_text = "", true_text="OK", false_t
 		edit.set_focus()
 		while True:
 			pyb.wfi()
-#			ugfx.poll()
+			ugfx.poll()
 			#if buttons.is_triggered("BTN_A"): return edit.text()
 			if buttons.is_triggered("BTN_B"): return default
 			if buttons.is_triggered("BTN_MENU"): return edit.text()
