@@ -67,7 +67,7 @@ def quick_launch_screen():
 	last_cursor = cursor.copy()
 	_draw_cursor(0, 0, ugfx.RED, win_quick)
 
-	app_to_load = "home"
+	app_to_load = "sponsors"
 
 	if not database_get("quicklaunch_firstrun"):
 		dialogs.notice("""This screen displays the most commonly used apps.

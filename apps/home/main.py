@@ -23,6 +23,8 @@ import dialogs
 from app import *
 import sys
 
+from music import hymne
+
 def draw_battery(back_colour,percent, win_bv):
 	percent = max(0,percent)
 	ugfx.set_default_font("c*")
@@ -102,9 +104,10 @@ else:
 
 buttons.init()
 if not onboard.is_splash_hidden():
-	splashes = ["apps/sponsors/splash3.gif"]
+	splashes = ["apps/home/kim.gif"]
 	for s in splashes:
 		ugfx.display_image(0,0,s)
+		#hymne()
 		delay = 2000
 		while delay:
 			delay -= 1
@@ -363,6 +366,5 @@ def home_main():
 
 while True:
 	# By separating most of the work in a function we save about 1,6kb memory
-	home_main()
-	gc.collect()
+	#home_main()
 	execfile("apps/home/quick_launch.py")
