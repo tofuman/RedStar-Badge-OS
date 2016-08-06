@@ -102,7 +102,7 @@ else:
 
 buttons.init()
 if not onboard.is_splash_hidden():
-	splashes = ["splash1.bmp"]
+	splashes = ["apps/sponsors/splash3.gif"]
 	for s in splashes:
 		ugfx.display_image(0,0,s)
 		delay = 2000
